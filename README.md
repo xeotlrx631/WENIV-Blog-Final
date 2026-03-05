@@ -43,17 +43,18 @@ Phase 4: 트러블슈팅 및 시스템 안정화 (Day 6)
 
 해결: src/api/post.js 내의 export 구문을 정리하고, 일관된 호출 패턴으로 통일하여 코드의 확장성 확보.
 
-📂 프로젝트 구조 (Project Structure)
-Plaintext
+## 📂 프로젝트 구조 (Project Structure)
 
+```plaintext
 src/
 ├── api/
-│ ├── client.js # Axios 인스턴스 및 인증 인터셉터
-│ └── post.js # 게시판 & AI API 호출 함수 정의
+│   ├── client.js       # Axios 인스턴스 및 인증 인터셉터
+│   └── post.js         # 게시판 & AI API 호출 함수 정의
 ├── pages/
-│ ├── Main.jsx # 게시글 리스트 레이아웃
-│ ├── Post-View.jsx # 상세 보기 (정밀 디버깅 및 ID 정제 적용)
-│ └── Write.jsx # 글쓰기 및 AI 보조 기능 통합
-└── App.js # 전체 라우팅 및 앱 아키텍처
+│   ├── Main.jsx        # 게시글 리스트 레이아웃
+│   ├── Post-View.jsx   # 상세 보기 (정밀 디버깅 및 ID 정제 적용)
+│   └── Write.jsx       # 글쓰기 및 AI 보조 기능 통합
+└── App.js              # 전체 라우팅 및 앱 아키텍처
 📝 최종 회고
 이번 프로젝트를 통해 기능을 구현하는 능력뿐만 아니라, 실제 서비스에서 발생할 수 있는 데이터 오염과 문법적 예외 상황을 추적하고 해결하는 디버깅 역량을 키울 수 있었습니다. 특히 네트워크 레벨의 에러(422)와 프론트엔드 렌더링 에러를 동시에 해결하며 풀스택 서비스의 흐름을 깊이 있게 이해하게 되었습니다.
+```
