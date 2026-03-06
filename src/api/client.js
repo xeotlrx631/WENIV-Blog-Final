@@ -1,4 +1,3 @@
-// [수정 후: src/api/client.js]
 import axios from "axios";
 
 const BASE_URL = "https://dev.wenivops.co.kr/services/fastapi-crud";
@@ -13,7 +12,6 @@ export const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-// 토큰 자동 주입 (키 값을 access_token으로 통일)
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -25,5 +23,5 @@ apiClient.interceptors.response.use(
   (error) => {
     console.error("API 요청 에러:", error.response || error.message);
     return Promise.reject(error);
-  },
+  }
 );
