@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getPostById, deletePostById, getPosts } from "../api/post";
+import { getPostById, getPosts } from "../api/post";
 
 const PostView = () => {
   const { id } = useParams();
@@ -15,14 +15,12 @@ const PostView = () => {
     const fetchPost = async () => {
       try {
         if (!id) return;
-
-        // UUID 형식인지 숫자인지 판별
         const isUUID = id.includes("-");
 
         if (isUUID) {
-          // UUID인 경우 → 전체 목록에서 해당 글 찾기
+          // UUID면 목록에서 찾기
           const allPosts = await getPosts();
-          const actualList = allPosts.data || allPosts;
+          const actualList = allPosts.value || allPosts.data || allPosts;
           const found = actualList.find((p) => p.id === id || p._id === id);
           if (found) {
             setPost(found);
@@ -31,7 +29,7 @@ const PostView = () => {
             navigate("/");
           }
         } else {
-          // 숫자 index인 경우 → 바로 API 호출
+          // 숫자면 API 직접 호출
           const response = await getPostById(id);
           const actualData = response?.data || response;
           if (actualData && (actualData.title || actualData.content)) {
@@ -52,24 +50,22 @@ const PostView = () => {
     fetchPost();
   }, [id, navigate]);
 
-  const handleDelete = async () => {
-    if (window.confirm("정말 삭제하시겠습니까?")) {
-      try {
-        const deleteId = post.index || post.id || post._id;
-        await deletePostById(deleteId);
-        alert("삭제되었습니다.");
-        navigate("/");
-      } catch (err) {
-        console.error("삭제 실패:", err);
-        alert("삭제 권한이 없거나 오류가 발생했습니다.");
-      }
-    }
-  };
-
   if (loading) return <div style={{ padding: "20px" }}>데이터 로딩 중...</div>;
   if (!post) return null;
 
-  const isAuthor = isLoggedIn && (post.author === loggedInUser || !post.author);
+  // index null(내가 쓴 글) + 로그인 상태일 때만 수정 버튼 노출
+  const canEdit =
+    isLoggedIn && !post.index && (post.author === loggedInUser || !post.author);
+
+  const handleEdit = () => {
+    const postId = post.id || post._id;
+    navigate(`/edit/${postId}`, {
+      state: {
+        originalTitle: post.title,
+        originalContent: post.content,
+      },
+    });
+  };
 
   return (
     <div
@@ -129,38 +125,20 @@ const PostView = () => {
           목록으로
         </button>
 
-        {isAuthor && (
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              onClick={() => {
-                const editId = post.index || post.id || post._id;
-                navigate(`/edit/${editId}`);
-              }}
-              style={{
-                cursor: "pointer",
-                padding: "10px 20px",
-                backgroundColor: "#007bff",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-              }}
-            >
-              수정하기
-            </button>
-            <button
-              onClick={handleDelete}
-              style={{
-                cursor: "pointer",
-                padding: "10px 20px",
-                backgroundColor: "#dc3545",
-                color: "white",
-                border: "none",
-                borderRadius: "5px",
-              }}
-            >
-              삭제하기
-            </button>
-          </div>
+        {canEdit && (
+          <button
+            onClick={handleEdit}
+            style={{
+              cursor: "pointer",
+              padding: "10px 20px",
+              backgroundColor: "#007bff",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+            }}
+          >
+            수정하기
+          </button>
         )}
       </div>
     </div>

@@ -1,27 +1,18 @@
 import { apiClient } from "./client";
 
 export const createPost = async (title, content) => {
-  // 글 작성 (index 없이 그냥 전송)
   const response = await apiClient.post(`/1/blog`, { title, content });
-
-  // 작성 후 전체 목록을 다시 불러와서 방금 쓴 글 찾기
-  const list = await apiClient.get(`/1/blog`);
-  const posts = list.data.data || list.data;
-
-  // title이 같은 글 중 index가 있는 글 찾기
-  const found = posts.find((p) => p.title === title && p.index);
-
-  return { ...response.data, index: found?.index || null };
+  return response.data;
 };
 
 export const getPosts = async () => {
   const response = await apiClient.get(`/1/blog`);
-  return response.data.data || response.data;
+  return response.data.value || response.data.data || response.data;
 };
 
 export const getPostById = async (id) => {
   const response = await apiClient.get(`/1/blog/${id}`);
-  return response.data.data || response.data;
+  return response.data.value || response.data.data || response.data;
 };
 
 export const deletePostById = async (id) => {
