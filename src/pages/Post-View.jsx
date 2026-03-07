@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getPostById, deletePostById } from "../api/post";
+import { getPostById, deletePostById, getPosts } from "../api/post";
 
 const PostView = () => {
   const { id } = useParams();
@@ -16,20 +16,30 @@ const PostView = () => {
       try {
         if (!id) return;
 
-        // [해결] 422 에러 방지: ID 뒤에 붙는 ':1' 등 모든 불순물 제거
-        const cleanId = id.split(":")[0];
-        console.log("정제된 ID로 상세 요청 시도:", cleanId);
+        // UUID 형식인지 숫자인지 판별
+        const isUUID = id.includes("-");
 
-        const response = await getPostById(cleanId);
-
-        // 서버 응답이 data 객체 안에 감싸져 있는 경우와 직접 객체인 경우 모두 대응
-        const actualData = response?.data || response;
-
-        if (actualData && (actualData.title || actualData.content)) {
-          setPost(actualData);
+        if (isUUID) {
+          // UUID인 경우 → 전체 목록에서 해당 글 찾기
+          const allPosts = await getPosts();
+          const actualList = allPosts.data || allPosts;
+          const found = actualList.find((p) => p.id === id || p._id === id);
+          if (found) {
+            setPost(found);
+          } else {
+            alert("게시글 정보를 찾을 수 없습니다.");
+            navigate("/");
+          }
         } else {
-          alert("게시글 정보를 찾을 수 없습니다.");
-          navigate("/");
+          // 숫자 index인 경우 → 바로 API 호출
+          const response = await getPostById(id);
+          const actualData = response?.data || response;
+          if (actualData && (actualData.title || actualData.content)) {
+            setPost(actualData);
+          } else {
+            alert("게시글 정보를 찾을 수 없습니다.");
+            navigate("/");
+          }
         }
       } catch (err) {
         console.error("게시글 상세 로드 에러:", err);
@@ -45,8 +55,8 @@ const PostView = () => {
   const handleDelete = async () => {
     if (window.confirm("정말 삭제하시겠습니까?")) {
       try {
-        const cleanId = id.split(":")[0];
-        await deletePostById(cleanId);
+        const deleteId = post.index || post.id || post._id;
+        await deletePostById(deleteId);
         alert("삭제되었습니다.");
         navigate("/");
       } catch (err) {
@@ -59,7 +69,6 @@ const PostView = () => {
   if (loading) return <div style={{ padding: "20px" }}>데이터 로딩 중...</div>;
   if (!post) return null;
 
-  // 작성자 본인 확인 로직
   const isAuthor = isLoggedIn && (post.author === loggedInUser || !post.author);
 
   return (
@@ -123,7 +132,10 @@ const PostView = () => {
         {isAuthor && (
           <div style={{ display: "flex", gap: "10px" }}>
             <button
-              onClick={() => navigate(`/write/${id.split(":")[0]}`)}
+              onClick={() => {
+                const editId = post.index || post.id || post._id;
+                navigate(`/edit/${editId}`);
+              }}
               style={{
                 cursor: "pointer",
                 padding: "10px 20px",

@@ -5,9 +5,8 @@ import {
   getPostById,
   updatePost,
   continueWriting,
+  getPosts,
 } from "../api/post";
-// 스타일링을 위해 나중에 Write.css 파일을 만들어 연결하세요.
-// import "./Write.css";
 
 export default function Write() {
   const { id } = useParams();
@@ -17,22 +16,37 @@ export default function Write() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (id) {
-      // 상세 페이지 ID 정제 로직 (어제 겪었던 422 에러 방지)
-      const cleanId = id.split(":")[0];
-      getPostById(cleanId)
-        .then((data) => {
+    if (!id) return;
+
+    const fetchPost = async () => {
+      try {
+        const isUUID = id.includes("-");
+
+        if (isUUID) {
+          // UUID인 경우 → 전체 목록에서 해당 글 찾기
+          const allPosts = await getPosts();
+          const actualList = allPosts.data || allPosts;
+          const found = actualList.find((p) => p.id === id || p._id === id);
+          if (found) {
+            setTitle(found.title || "");
+            setContent(found.content || "");
+          } else {
+            alert("글을 불러오는데 실패했습니다.");
+          }
+        } else {
+          // 숫자 index인 경우 → 바로 API 호출
+          const data = await getPostById(id);
           setTitle(data.title || "");
           setContent(data.content || "");
-        })
-        .catch((err) => {
-          console.error("데이터 로드 실패:", err);
-          alert("글을 불러오는데 실패했습니다.");
-        });
-    }
+        }
+      } catch (err) {
+        console.error("데이터 로드 실패:", err);
+        alert("글을 불러오는데 실패했습니다.");
+      }
+    };
+    fetchPost();
   }, [id]);
 
-  // [강사님 피드백 반영] AI 이어쓰기 로직 고도화
   const handleAI = async () => {
     if (!content.trim())
       return alert("내용을 먼저 입력해야 AI가 이어쓸 수 있습니다.");
@@ -40,8 +54,6 @@ export default function Write() {
     setIsAILoading(true);
     try {
       const data = await continueWriting(content);
-
-      // 서버 응답 구조가 객체일 경우와 문자열일 경우 모두 대응
       const aiResponse =
         data.continuation || (typeof data === "string" ? data : data.content);
 
@@ -60,15 +72,37 @@ export default function Write() {
 
   const handleSave = async () => {
     try {
-      const cleanId = id ? id.split(":")[0] : null;
-      if (cleanId) {
-        await updatePost(cleanId, title, content);
+      if (id) {
+        // 수정인 경우
+        const isUUID = id.includes("-");
+        let updateId = id;
+
+        if (isUUID) {
+          // UUID면 목록에서 index 찾기
+          const allPosts = await getPosts();
+          const actualList = allPosts.data || allPosts;
+          const found = actualList.find((p) => p.id === id || p._id === id);
+          updateId = found?.index || id;
+        }
+
+        await updatePost(updateId, title, content);
         alert("수정이 완료되었습니다.");
+        navigate(`/post/${updateId}`);
       } else {
-        await createPost(title, content);
+        // 새 글 작성인 경우 → 응답에서 index 추출
+        const response = await createPost(title, content);
+        console.log("글 작성 응답:", response);
+
+        // 서버 응답에서 index 추출
+        const newIndex = response?.index || response?.data?.index;
+
         alert("글이 발행되었습니다.");
+        if (newIndex) {
+          navigate(`/post/${newIndex}`);
+        } else {
+          navigate("/");
+        }
       }
-      navigate("/");
     } catch (error) {
       console.error("저장 중 에러 발생:", error);
       alert("저장에 실패했습니다.");
@@ -122,7 +156,6 @@ export default function Write() {
           }}
         />
 
-        {/* AI 버튼을 텍스트박스 내부 하단에 배치 (피그마 스타일) */}
         <button
           className={`ai-button ${isAILoading ? "loading" : ""}`}
           onClick={handleAI}

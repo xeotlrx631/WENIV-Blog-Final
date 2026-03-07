@@ -9,7 +9,6 @@ export default function Home() {
   useEffect(() => {
     getPosts()
       .then((res) => {
-        // [수정] 서버가 { data: [...] } 형태로 주는지, 바로 [...]로 주는지 체크
         const actualList = res.data || res;
         setPosts(Array.isArray(actualList) ? actualList : []);
         setLoading(false);
@@ -36,8 +35,8 @@ export default function Home() {
         <p>아직 작성된 글이 없습니다.</p>
       ) : (
         posts.map((post) => {
-          // [핵심] 서버마다 id 이름이 다를 수 있으므로 안전하게 추출
-          const targetId = post.id || post.post_id || post._id;
+          // ✅ 숫자 index 우선 사용, 없으면 _id, id 순으로 대응
+          const targetId = post.index || post._id || post.id;
 
           return (
             <div
@@ -49,7 +48,6 @@ export default function Home() {
                 borderRadius: "8px",
               }}
             >
-              {/* targetId가 정상적으로 잡혀야 링크가 생성됩니다. */}
               <Link to={`/post/${targetId}`}>
                 <h3 style={{ margin: "0 0 10px 0" }}>{post.title}</h3>
               </Link>

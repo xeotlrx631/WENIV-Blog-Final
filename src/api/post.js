@@ -1,9 +1,17 @@
-import axios from "axios";
 import { apiClient } from "./client";
 
 export const createPost = async (title, content) => {
+  // 글 작성 (index 없이 그냥 전송)
   const response = await apiClient.post(`/1/blog`, { title, content });
-  return response.data;
+
+  // 작성 후 전체 목록을 다시 불러와서 방금 쓴 글 찾기
+  const list = await apiClient.get(`/1/blog`);
+  const posts = list.data.data || list.data;
+
+  // title이 같은 글 중 index가 있는 글 찾기
+  const found = posts.find((p) => p.title === title && p.index);
+
+  return { ...response.data, index: found?.index || null };
 };
 
 export const getPosts = async () => {
@@ -26,22 +34,34 @@ export const updatePost = async (id, title, content) => {
   return response.data;
 };
 
-// [AI 이어쓰기] - 리다이렉트 원천 봉쇄 버전
+// [AI 이어쓰기] - 위니브 OpenAI 프록시 버전 (API 키 불필요!)
 export const continueWriting = async (content) => {
-  // 1. apiClient를 쓰지 않고 쌩 axios를 씁니다. (CORS 에러 회피용)
-  // 2. 서버가 내부적으로 리다이렉트 시키려는 '진짜 종착역' 주소입니다.
-  // 3. 주소 앞에 services/fastapi-crud를 빼고 전송합니다.
-  const response = await axios.post(
-    `https://dev.wenivops.co.kr/1/blog/ai`,
-    { content: content },
+  const response = await fetch(
+    "https://dev.wenivops.co.kr/services/openai-api",
     {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
       },
+      body: JSON.stringify([
+        {
+          role: "system",
+          content:
+            "assistant는 블로그 글쓰기를 도와주는 작가이다. 원문의 말투와 분위기를 유지하며 자연스럽게 이어쓴다.",
+        },
+        {
+          role: "user",
+          content: `다음 글을 자연스럽게 이어서 2~3문단 분량으로 써주세요:\n\n${content}`,
+        },
+      ]),
     },
   );
 
-  console.log("드디어 성공한 AI 응답:", response.data);
-  return response.data.continuation || response.data.result || response.data;
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error("AI 요청 실패");
+  }
+
+  return { continuation: data.choices[0].message.content };
 };
